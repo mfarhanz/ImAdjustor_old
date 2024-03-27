@@ -40,5 +40,4 @@ def channel_op(size, channels, kernel, op_type):
         case 'ordered dither':
             process_channels[:] = [frombuffer(arr.get_obj(), dtype=float64).reshape(channels[0].shape)
                                    for arr in process_channels]
-    print(process_channels[0].shape)
     return stack(process_channels, axis=2)
