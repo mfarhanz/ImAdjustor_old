@@ -11,12 +11,3 @@
 
 <br>
 P.S. This program requires the other associated files/folders to be in the same directory
-
-<br>
-<br>
-<br>
-<br>
-<br>
-<br>
-
-##### <sup>yeah theres a lot of these out there, but i wanted to try my hand at image processing</sup>
