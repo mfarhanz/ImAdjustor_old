@@ -10,7 +10,7 @@
 `python image_adjustor.py` or double-click image_adjustor.py
 
 <br>
-P.S. This program requires the other associated files/folders to be in the same directory
-<br>
-<br>
-![ex](http://i.imgur.com/60bts.gif)
+P.S. This program requires the other associated files/folders to be in the same directory  
+
+
+![Alt Text](https://media.giphy.com/media/vFKqnCdLPNOKc/giphy.gif)
