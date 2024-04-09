@@ -2,6 +2,7 @@
 image/gif filtering viewer tool
 p.s. needs kernel_ops.py and filters.py as a dependency
 """
+import gc
 from os import listdir, path
 from threading import Thread
 from multiprocessing import Array
@@ -50,7 +51,7 @@ class Editor:
         self.curr_filter, self.curr_theme, self.curr_overlay_filter = StringVar(self.root, 'none'), StringVar(self.root, 'none'), StringVar(self.root, 'none')
         self.norm_method, self.dither_opt = StringVar(self.root, 'clip'), StringVar(self.root, 'min_max')
         self.curr_intensity, self.norm_thresh, self.coefficient = IntVar(self.root, 1), IntVar(self.root, 100), IntVar(self.root, 125)
-        self.channel_id, self.intensity_red, self.intensity_green, self.intensity_blue = IntVar(self.root, 0), IntVar(self.root, 0), IntVar(self.root, 0), IntVar(self.root, 0)
+        self.channel_id, self.intensity_red, self.intensity_green, self.intensity_blue = IntVar(self.root, 0), IntVar(self.root, 85), IntVar(self.root, 85), IntVar(self.root, 85)
         self.menubar = Menu(self.root)
         self.root.config(menu=self.menubar)
         self.root.resizable(False, False)
@@ -124,7 +125,7 @@ class Editor:
             self.canvas.create_window(self.canvas.winfo_reqwidth()-self.rbtns[-1].winfo_reqwidth()*4+i*self.rbtns[-1].winfo_reqwidth(),
                                       self.canvas.winfo_reqheight()-28, anchor="se", window=self.rbtns[-1], tags='channel', state="hidden")
         for i in range(3):
-            self.clrscales.append(ttkScale(self.root, from_=0, to=255, value=0, length=100, style=f'CustomScale{i}.Horizontal.TScale', command=lambda x, indx=i: self.update_color(indx, x),
+            self.clrscales.append(ttkScale(self.root, from_=0, to=255, value=170, length=100, style=f'CustomScale{i}.Horizontal.TScale', command=lambda x, indx=i: self.update_color(indx, x),
                              variable=(self.intensity_red, self.intensity_green, self.intensity_blue)[i], orient="horizontal"))
             self.clrscales[-1].bind("<ButtonRelease-1>", lambda _: self.apply_color_matrix())
             self.style.configure(f'CustomScale{i}.Horizontal.TScale', sliderlength=24, sliderrelief='flat', troughcolor='black')
@@ -231,7 +232,8 @@ class Editor:
                    f"Processing time: {self.PROCESS_DUR} ms\nCurrent theme: {self.curr_theme.get()} ({self.curr_intensity.get()})\n" \
                    f"Current filter: {self.curr_filter.get()}\nApplied: {self.process_order}"
         else:
-            clr_count = 256 if not self.saveframes[self.CURR_FRAME].getcolors() else len(self.saveframes[self.CURR_FRAME].getcolors())
+            clr_count = 256 if not self.saveframes[self.CURR_FRAME].getcolors() else \
+                len((self.saveframes, self.red_img, self.green_img, self.blue_img)[self.channel_id.get()][self.CURR_FRAME].getcolors())
             text = f"Size: {self.FILE_SIZE} MB\nDimensions: {self.saveframes[0].width} x {self.saveframes[0].height}\n" \
                    f"Frame Count: {self.FRAME_COUNT}\nFrame Delay: {self.GIF_DUR} ms\nCurrent Frame: {self.CURR_FRAME+1}\n" \
                    f"Processing time: {self.PROCESS_DUR} ms\nCurrent theme: {self.curr_theme.get()} ({self.curr_intensity.get()})\n" \
@@ -250,30 +252,26 @@ class Editor:
             filetypes=([("GIF files", "*.gif")], [("PNG files", "*.png"), ("JPG files", "*.jpg")])[not self.saveframes])
         if file_path:
             if self.saveframes:
-                self.saveframes[0].save(file_path, save_all=True, append_images=self.saveframes[1:],
-                               optimize=False, duration=Image.open(self.f_path).info['duration'], disposal=0, loop=0)
+                curr_channel = ("saveframes", "red_img", "green_img", "blue_img")[self.channel_id.get()]
+                getattr(self, f'{curr_channel}')[0].save(file_path, save_all=True, append_images=getattr(self, f'{curr_channel}')[1:],
+                          optimize=False, duration=Image.open(self.f_path).info['duration'], disposal=0, loop=0)
             else:
-                if self.channel_id.get() == 1 and self.red_img:
-                    self.red_img = self.red_img.resize(self.orig_img.size)
-                    self.red_img.save(file_path, save_all=True, optimize=False)
-                elif self.channel_id.get() == 2 and self.green_img:
-                    self.green_img = self.green_img.resize(self.orig_img.size)
-                    self.green_img.save(file_path, save_all=True, optimize=False)
-                elif self.channel_id.get() == 3 and self.blue_img:
-                    self.blue_img = self.blue_img.resize(self.orig_img.size)
-                    self.blue_img.save(file_path, save_all=True, optimize=False)
+                curr_channel = ("scaled_img", "red_img", "green_img", "blue_img")[self.channel_id.get()]
+                setattr(self, f'{curr_channel}', getattr(self, f'{curr_channel}').resize(self.orig_img.size))
+                if file_path[-3:] != 'png':
+                    getattr(self, f'{curr_channel}').save(file_path, optimise=False)
                 else:
-                    self.scaled_img = self.scaled_img.resize(self.orig_img.size)
-                    self.scaled_img.save(file_path, save_all=True, optimize=False)
+                    getattr(self, f'{curr_channel}').save(file_path, save_all=True, optimise=False)
+            del curr_channel, file_path
             text_id = self.canvas.create_text(self.canvas.winfo_reqwidth()-150, self.canvas.winfo_reqheight()-80,
-                                              text='Saved.', fill='green', font=Font(family=families()[21], size=11, weight='bold'))
+                                              text='Saved.', fill='#AFB1B3', font=Font(family=families()[21], size=11, weight='bold'))
             tmp = self.root.after(3000, lambda: (self.canvas.delete(text_id), self.root.after_cancel(tmp)))
             gccollect()
 
     def get_size(self):
         self.FILE_SIZE = 0
         if self.f_path[-3:] == 'gif':
-            for ffrm in self.saveframes:
+            for ffrm in (self.saveframes, self.red_img, self.green_img, self.blue_img)[self.channel_id.get()]:
                 bytestream = BytesIO()
                 ffrm.save(bytestream, format="PNG")
                 self.FILE_SIZE += bytestream.getbuffer().nbytes / 1024 ** 2
@@ -281,7 +279,7 @@ class Editor:
             del bytestream, ffrm
         else:
             bytestream = BytesIO()
-            self.scaled_img.save(bytestream, format="PNG")
+            getattr(self, f'{("scaled", "red", "green", "blue")[self.channel_id.get()]}_img').save(bytestream, format="PNG")
             self.FILE_SIZE = round(bytestream.getbuffer().nbytes / 1024 ** 2, 1)
             del bytestream
         gccollect()
@@ -304,22 +302,42 @@ class Editor:
             self.animate2(0)
 
     def channel_transform(self):
-        if self.f_path[-3:] in ['png', 'jpg', 'jpeg', 'bmp'] and self.EFFECT_ACTIVE:
+        if self.summary_txt:
+            self.canvas.delete(self.summary_txt, self.summary_bg, 'summary')
+        if self.channel_id.get() != 0:
+            curr_channel = ("red", "green", "blue")[self.channel_id.get() - 1]
+            for channel in ("red", "green", "blue"):
+                if channel == curr_channel:
+                    continue
+                setattr(self, f'{channel}_img', None)
+        if self.f_path[-3:] in ['png', 'jpg', 'jpeg', 'bmp']:
             self.canvas.delete("mainimg")
-            if self.summary_txt:
-                self.canvas.delete(self.summary_txt, self.summary_bg, 'summary')
-            if any((self.red_img, self.green_img, self.blue_img)):
-                self.newtkimg = ImageTk.PhotoImage((self.scaled_img, self.red_img, self.green_img, self.blue_img)[self.channel_id.get()])
-                self.canvas.create_image(0, 0, image=self.newtkimg, anchor=NW, tags='mainimg')
+            if self.channel_id.get() != 0:
+                setattr(self, f'{curr_channel}_img', None)
+                imgarr = array(self.scaled_img).astype(int)[:, :, self.channel_id.get() - 1]
+                ret = stack([imgarr, imgarr, imgarr], axis=2)
+                setattr(self, f'{curr_channel}_img', Image.fromarray(uint8(ret)))
+                del channel, curr_channel, imgarr, ret
+                gc.collect()
+            self.get_size()
+            self.newtkimg = ImageTk.PhotoImage((self.scaled_img, self.red_img, self.green_img, self.blue_img)[self.channel_id.get()])
+            self.canvas.create_image(0, 0, image=self.newtkimg, anchor=NW, tags='mainimg')
             self.frame_summary(self.f_path[-3:])
-        elif self.f_path[-3:] == 'gif' and self.EFFECT_ACTIVE:
-            lasttheme, lastfilter = self.curr_theme.get(), self.curr_filter.get()
-            self.curr_theme.set('none')
-            self.apply_color_matrix()
-            self.curr_theme.set(lasttheme)
-            self.apply_color_matrix()
-            self.curr_filter.set(lastfilter)
-            self.apply_transform_matrix()
+        elif self.f_path[-3:] == 'gif':
+            if self.filter_timer:
+                self.root.after_cancel(self.filter_timer)
+                self.filter_timer = None
+                self.canvas.delete(self.frame_id)
+            if self.channel_id.get() != 0:
+                setattr(self, f'{curr_channel}_img', [])
+                for frame in self.saveframes:
+                    imgarr = array(frame).astype(int)[:, :, self.channel_id.get()-1]
+                    ret = stack([imgarr, imgarr, imgarr], axis=2)
+                    getattr(self, f'{curr_channel}_img').append(Image.fromarray(uint8(ret)))
+                del channel, curr_channel, imgarr, frame, ret
+                gc.collect()
+            self.get_size()
+            self.animate(self.CURR_FRAME, ch=self.channel_id.get())
 
     def update_color(self, indx, x:str):
         x = int(float(x))
@@ -372,7 +390,7 @@ class Editor:
             n = n + 1 if n != len(self.frames2) - 1 else 0
             self.filter_timer2 = self.root.after(2, self.animate2, n)
 
-    def animate(self, n):
+    def animate(self, n, ch=0):
         try:
             self.cachedframes[:] = []
             self.canvas.delete(self.frame_id)
@@ -383,14 +401,14 @@ class Editor:
             if self.summary_txt:
                 self.canvas.delete(self.summary_txt, self.summary_bg, 'summary')
             self.frame_summary(self.f_path[-3:])
-            self.filter_timer = self.root.after(self.GIF_DUR, self.animate, self.CURR_FRAME)
+            self.filter_timer = self.root.after(self.GIF_DUR, self.animate, self.CURR_FRAME, ch)
         except StopIteration:
             self.pilframes, self.newtkimg = None, None
             if not self.saveframes:
                 self.pilframes = ImageSequence.Iterator(Image.open(self.f_path))
             else:
-                self.pilframes = iter(self.saveframes)
-            self.root.after(1, self.animate, self.CURR_FRAME)
+                self.pilframes = iter((self.saveframes, self.red_img, self.green_img, self.blue_img)[self.channel_id.get()])
+            self.root.after(1, self.animate, self.CURR_FRAME, self.channel_id.get())
 
     def toggle_play_gif(self):
         self.playbtnstate = self.playbtnstate ^ 1
@@ -423,34 +441,28 @@ class Editor:
             else:
                 self.canvas.itemconfigure('color_scale', state="hidden")
                 self.canvas.itemconfigure('color_preview', state="hidden")
-            r, g, b = self.intensity_red.get()*8/255-4, self.intensity_green.get()*8/255-4, self.intensity_blue.get()*8/255-4
-            print(r,g,b)
+            r, g, b = self.intensity_red.get()*3/255, self.intensity_green.get()*3/255, self.intensity_blue.get()*3/255
+            self.channel_id.set(0)
             if self.f_path[-3:] == 'gif':
                 if self.curr_theme.get() == 'none':
                     self.saveframes[:] = [frm.convert(mode='RGB') for frm in ImageSequence.Iterator(Image.open(self.f_path))]
                 elif self.EFFECT_ACTIVE:
-                    self.process_order = self.process_order + '\u2192' + (self.curr_theme.get(), f'RGB(#{r:02x}{g:02x}{b:02x})')[self.curr_theme.get() == 'custom']
+                    self.process_order = self.process_order + '\u2192' + (self.curr_theme.get(), f'RGB({r*255//3}, {g*255//3}, {b*255//3})')[self.curr_theme.get() == 'custom']
                     self.saveframes[:] = [frm.convert(mode='RGB', matrix=color_matrix[self.curr_theme.get()]((self.curr_intensity.get(), (r, g, b))[self.curr_theme.get() == 'custom'])) for frm in self.saveframes]
                 elif not self.EFFECT_ACTIVE:
-                    self.process_order = '' + (self.curr_theme.get(), f'RGB(#{r:02x}{g:02x}{b:02x})')[self.curr_theme.get() == 'custom']
+                    self.process_order = '' + (self.curr_theme.get(), f'RGB({r*255//3}, {g*255//3}, {b*255//3})')[self.curr_theme.get() == 'custom']
                     tmpfrms = [frm.convert(mode='RGB') for frm in ImageSequence.Iterator(Image.open(self.f_path))]
                     self.saveframes[:] = [frm.convert(mode='RGB', matrix=color_matrix[self.curr_theme.get()]((self.curr_intensity.get(), (r, g, b))[self.curr_theme.get() == 'custom'])) for frm in tmpfrms]
                     del tmpfrms
             else:
                 self.canvas.delete("mainimg")
                 if self.curr_theme.get() == 'none':
-                    self.red_img, self.green_img, self.blue_img = [None] * 3
                     self.scaled_img = self.orig_img.convert('RGB')
                     self.scaled_img = self.orig_img.resize((self.im_width, self.im_height))
                 elif self.EFFECT_ACTIVE:
-                    self.process_order = self.process_order + '\u2192' + (self.curr_theme.get(), f'RGB(#{r:02x}{g:02x}{b:02x})')[self.curr_theme.get() == 'custom']
+                    self.process_order = self.process_order + '\u2192' + (self.curr_theme.get(), f'RGB({r*255//3}, {g*255//3}, {b*255//3})')[self.curr_theme.get() == 'custom']
                     self.scaled_img = self.scaled_img.convert(mode='RGB', matrix=color_matrix[self.curr_theme.get()]((self.curr_intensity.get(), (r, g, b))[self.curr_theme.get() == 'custom']))
-                    if self.red_img:
-                        self.red_img = self.red_img.convert(mode='RGB', matrix=color_matrix[self.curr_theme.get()]((self.curr_intensity.get(), (r, g, b))[self.curr_theme.get() == 'custom']))
-                        self.green_img = self.green_img.convert(mode='RGB', matrix=color_matrix[self.curr_theme.get()]((self.curr_intensity.get(), (r, g, b))[self.curr_theme.get() == 'custom']))
-                        self.blue_img = self.blue_img.convert(mode='RGB', matrix=color_matrix[self.curr_theme.get()]((self.curr_intensity.get(), (r, g, b))[self.curr_theme.get() == 'custom']))
                 elif not self.EFFECT_ACTIVE:
-                    self.red_img, self.green_img, self.blue_img = [None] * 3
                     self.process_order = '' + self.curr_theme.get()
                     self.scaled_img = self.orig_img.convert('RGB')
                     self.scaled_img = self.scaled_img.resize((self.im_width, self.im_height)).convert(mode='RGB',
@@ -492,26 +504,7 @@ class Editor:
                 thd.join()
             process_channels[:] = [frombuffer(channel.get_obj(), dtype=int).reshape(imgchannels[0].shape)
                                    for channel in process_channels]
-            if self.f_path[-3:] == 'gif':
-                chosen_channel = [0, 0, 0] if self.channel_id.get() == 1 \
-                                else [1, 1, 1] if self.channel_id.get() == 2 \
-                                else [2, 2, 2] if self.channel_id.get() == 3 else [0, 1, 2]
-                ret = stack([process_channels[chosen_channel[0]], process_channels[chosen_channel[1]], process_channels[chosen_channel[2]]], axis=2)
-            else:
-                ret = stack([process_channels[0], process_channels[1], process_channels[2]], axis=2)
-                ret_red = stack([process_channels[0], process_channels[0], process_channels[0]], axis=2)
-                ret_green = stack([process_channels[1], process_channels[1], process_channels[1]], axis=2)
-                ret_blue = stack([process_channels[2], process_channels[2], process_channels[2]], axis=2)
-                match self.norm_method.get():
-                    case 'clip':
-                        norm_ret_red, norm_ret_green, norm_ret_blue = clip(ret_red, 0, 255), clip(ret_green, 0, 255), clip(ret_blue, 0, 255)
-                    case 'modulo':
-                        norm_ret_red, norm_ret_green, norm_ret_blue = ret_red % 255, ret_green % 255, ret_blue % 255
-                    case 'threshold':
-                        norm_ret_red, norm_ret_green, norm_ret_blue = ret_red.copy(), ret_green.copy(), ret_blue.copy()
-                        norm_ret_red[ret <= self.norm_thresh.get()], norm_ret_red[ret > self.norm_thresh.get()] = 0, 255
-                        norm_ret_green[ret <= self.norm_thresh.get()], norm_ret_green[ret > self.norm_thresh.get()] = 0, 255
-                        norm_ret_blue[ret <= self.norm_thresh.get()], norm_ret_blue[ret > self.norm_thresh.get()] = 0, 255
+            ret = stack(process_channels, axis=2)
             match self.norm_method.get():
                 case 'clip':
                     norm_ret = clip(ret, 0, 255)
@@ -525,22 +518,15 @@ class Editor:
                 self.saveframes.append(Image.fromarray(uint8(norm_ret)))
             else:
                 self.scaled_img = Image.fromarray(uint8(norm_ret), 'RGB')
-                self.red_img = Image.fromarray(uint8(norm_ret_red), 'RGB')
-                self.green_img = Image.fromarray(uint8(norm_ret_green), 'RGB')
-                self.blue_img = Image.fromarray(uint8(norm_ret_blue), 'RGB')
                 self.newtkimg = ImageTk.PhotoImage(self.scaled_img)
                 self.canvas.create_image(0, 0, image=self.newtkimg, anchor=NW, tags='mainimg')
-        del imgarr, imgchannels, process_channels, ret, ops, op_type, pad_len, kernel
-        if self.f_path[-3:] == 'gif':
-            del chosen_channel
-        else:
-            del ret_red, ret_green, ret_blue, norm_ret, norm_ret_red, norm_ret_blue, norm_ret_green
-        gccollect()
         stp = perf_counter()
         self.progress_bar.stop()
+        self.channel_id.set(0)
         if self.f_path[-3:] == 'gif':
             self.animate(self.CURR_FRAME)
         self.PROCESS_DUR = round((stp - strt) * 1000, 2)
+        del imgarr, imgchannels, process_channels, ret, ops, op_type, pad_len, kernel, strt, stp
         if self.process_order:
             self.process_order = self.process_order + '\u2192' + self.curr_filter.get()
         else:
@@ -556,6 +542,7 @@ class Editor:
             self.THREAD_REF[0].join()
             del self.THREAD_REF[0]
             gccollect()
+        gccollect()
 
     def apply_transform_matrix(self):
         print(f'\n{int(process.memory_info().rss / 1024 ** 2)} MB used')
