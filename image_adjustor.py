@@ -19,8 +19,8 @@ from ttkthemes import ThemedStyle
 from PIL import Image, ImageTk, ImageSequence
 from numpy import array, clip, uint8, frombuffer, stack
 
-import kernel_ops
-from filters import filter_matrix, color_matrix
+import utils.kernel_ops
+from utils.filters import filter_matrix, color_matrix
 
 class Editor:
     def __init__(self):
