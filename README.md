@@ -13,5 +13,4 @@
 P.S. This program requires the other associated files/folders to be in the same directory
 <br>
 <br>
-https://github.com/mfarhanz/ImAdjustor/blob/main/example.gif
-![](http://i.imgur.com/60bts.gif)
+![ex](http://i.imgur.com/60bts.gif)
