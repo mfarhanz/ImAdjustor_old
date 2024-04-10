@@ -57,10 +57,20 @@ filter_matrix = {
         'kernel': ((0, 0, 0.3333), (0, 0.3333, 0), (0.3333, 0, 0)),
         'type': 'convolution'
     },
-    'negative': {
-        'kernel': ((0, 0, 0), (0, -1, 0), (0, 0, 0)),
+    '1': '',
+    'high_boost': {
+        'kernel': ((-1, -1, -1), (-1, 9, -1), (-1, -1, -1)),
         'type': 'convolution'
     },
+    'emboss': {
+        'kernel': ((-2, -1, 0), (-1,  1, 1), (0,  1, 2)),
+        'type': 'convolution'
+    },
+    'sharpen': {
+        'kernel': ((0, -1,  0), (-1,  5, -1), (0, -1,  0)),
+        'type': 'convolution'
+    },
+    '2': '',
     'sobel_edge_detect_H': {
         'kernel': ((-1, 0, 1), (-2, 0, 2), (-1, 0, 1)),
         'type': 'convolution'
@@ -137,10 +147,6 @@ filter_matrix = {
         'kernel': ((-1, -1, -1), (-1,  8, -1), (-1, -1, -1)),
         'type': 'convolution'
     },
-    'high_boost': {
-        'kernel': ((-1, -1, -1), (-1, 9, -1), (-1, -1, -1)),
-        'type': 'convolution'
-    },
     'laplacian_5x5': {
         'kernel': ((0, -2, -4, -2, 0), (-2, -4, 8, -4, -2), (-4, 8, 16, 8, -4), (-2, -4, 8, -4, -2),
                    (0, -2, -4, -2, 0)),
@@ -166,6 +172,11 @@ filter_matrix = {
                    (0.0125, 0.0625, 0, -0.1375,  0, 0.0625, 0.0125),
                    (0, 0.0125, 0.0625, 0.075, 0.0625, 0.0125, 0),
                    (0, 0, 0.0125, 0.0125, 0.0125, 0, 0)),
+        'type': 'convolution'
+    },
+    '3': '',
+    'negative': {
+        'kernel': ((0, 0, 0), (0, -1, 0), (0, 0, 0)),
         'type': 'convolution'
     },
     'hvs_1': {
@@ -196,14 +207,7 @@ filter_matrix = {
                    (0.00193, 0.00595, 0.01426, 0.02665, 0.03877, 0.04394, 0.03877, 0.02665, 0.01426, 0.00595, 0.00193)),
         'type': 'convolution'
     },
-    'emboss': {
-        'kernel': ((-2, -1, 0), (-1,  1, 1), (0,  1, 2)),
-        'type': 'convolution'
-    },
-    'sharpen': {
-        'kernel': ((0, -1,  0), (-1,  5, -1), (0, -1,  0)),
-        'type': 'convolution'
-    },
+    '4': '',
     'screen': {
         'kernel': ((0, ), (1, )),
         'type': 'ordered dither'
@@ -250,11 +254,11 @@ filter_matrix = {
         'type': 'ordered dither'
     },
     'non_rect_1': {
-        'kernel': ((0, 1, 0), (0.75, 0, 0.25), (0, 0.5, 0)),
+        'kernel': ((0, 0.8, 0), (0.6, 0, 0.2), (0, 0.4, 0)),
         'type': 'ordered dither'
     },
     'non_rect_2': {
-        'kernel': ((0, 0.5714, 0.2857, 0), (0.8571, 0, 0.7143, 0.4286), (0, 1, 0.1429, 0)),
+        'kernel': ((0, 0.5, 0.25, 0), (0.75, 0, 0.625, 0.375), (0, 0.875, 0.125, 0)),
         'type': 'ordered dither'
     },
     'tpdf_dither': {
