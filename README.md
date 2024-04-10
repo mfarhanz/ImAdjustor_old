@@ -1,5 +1,5 @@
 ## ImAdjustor
-##### _Add cool filters and effects to your GIFs/Images_ <ins>_superfast_</ins>
+##### _GUI Tool for editing Images/GIFs and adding effects_
 <br>
 
 #### Requirements -
