@@ -15,4 +15,4 @@ P.S. This program requires the other associated files/folders to be in the same 
 <br>
 <br>
 
-![](https://github.com/mfarhanz/ImAdjustor/blob/main/example.gif)
+![](https://github.com/mfarhanz/ImAdjustor/blob/main/ex1.gif)
