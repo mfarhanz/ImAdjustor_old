@@ -19,8 +19,8 @@ from ttkthemes import ThemedStyle
 from PIL import Image, ImageTk, ImageSequence
 from numpy import array, clip, uint8, frombuffer, stack
 
-import utils.kernel_ops
-from utils.filters import filter_matrix, color_matrix
+import kernel_ops
+from filters import filter_matrix, color_matrix
 
 class Editor:
     def __init__(self):
@@ -42,8 +42,6 @@ class Editor:
     def setup(self):
         self.root = Tk()
         self.root.title("ImAdjustor")
-        # self.style = Style()
-        # self.style.theme_use('default')
         self.style = ThemedStyle(theme="black")
         self.root.geometry('%dx%d+%d+%d' % (self.scrx, self.scry, (self.root.winfo_screenmmwidth()-self.root.winfo_reqwidth()),
                                             (self.root.winfo_screenmmheight()-self.root.winfo_reqheight())))
@@ -66,10 +64,13 @@ class Editor:
         filters_menu = Menu(self.menubar, tearoff=False)
         self.menubar.add_cascade(label="Filters", menu=filters_menu)
         for filter_option in list(filter_matrix.keys()):
-            filters_menu.add_radiobutton(label=filter_option, variable=self.curr_filter, value=filter_option, command=self.apply_transform_matrix)
+            if filter_option.isdigit():
+                filters_menu.add_separator()
+            else:
+                filters_menu.add_radiobutton(label=filter_option, variable=self.curr_filter, value=filter_option, command=self.apply_transform_matrix)
         normalize_menu = Menu(self.menubar, tearoff=False)
         self.menubar.add_cascade(label="Normalize", menu=normalize_menu)
-        norm_options = ['clip', 'modulo', 'threshold']
+        norm_options = ['clip', 'modulo', 'abs', 'inverse', 'threshold', 'inv_threshold']
         self.norm_method.set(norm_options[0])
         for option in norm_options:
             normalize_menu.add_radiobutton(label=option, variable=self.norm_method, value=option, command=self.toggle_scale)
@@ -85,8 +86,15 @@ class Editor:
         for fltr in overlay_filters:
             overlay_filter_menu.add_radiobutton(label=fltr, variable=self.curr_overlay_filter,
                                                 value=fltr, command=self.load_overlay_filter)
+        self.canvas.create_text(self.canvas.winfo_reqwidth()//2, self.canvas.winfo_reqheight()//2-30, text='\U0001F4C2',
+                                              font=Font(family=families()[40], size=100), fill='#AFB1B3', tags='placeholder')
+        self.canvas.create_text(self.canvas.winfo_reqwidth() // 2, self.canvas.winfo_reqheight() // 2 + 60, text='Load an Image',
+                                                  font=Font(family=families()[40], size=20), fill='#AFB1B3', tags='placeholder')
+        self.canvas.tag_bind('placeholder', "<Enter>", lambda _: self.canvas.itemconfigure('placeholder', fill='#838E95'))
+        self.canvas.tag_bind('placeholder', "<Leave>", lambda _: self.canvas.itemconfigure('placeholder', fill='#AFB1B3'))
+        self.canvas.tag_bind('placeholder', "<Button-1>", lambda _: self.open_file())
         self.intensity_frame = LabelFrame(self.root, text=f'Intensity: {self.curr_intensity.get()}', font=Font(family=families()[40], size=10),
-                                     background="gray30", foreground='white')
+                                     background="#3C3F41", foreground='white')
         self.btn_inc = ttkButton(self.intensity_frame, text='   \u2795', width=6, padding=(2,))
         self.btn_dec = ttkButton(self.intensity_frame, text='   \u2796', width=6, padding=(2,))
         self.btn_inc.bind('<ButtonPress-1>', self.intensity_increase)
@@ -99,7 +107,7 @@ class Editor:
         self.canvas.create_window(self.canvas.winfo_reqwidth() - self.btn_dec.winfo_reqwidth()//2,
                                   self.canvas.winfo_reqheight() - 125, anchor="se", window=self.intensity_frame, tags='intensity', state="hidden")
         self.coeff_frame = LabelFrame(self.root, text=f'\u03BB: {self.coefficient.get()}', font=Font(family=families()[40], size=10),
-                                  background="gray30", foreground='white')
+                                  background="#3C3F41", foreground='white')
         coeff_scale = ttkScale(self.coeff_frame, from_=5, to=250, orient=HORIZONTAL, variable=self.coefficient,
                                length=105, command=self.update_coefficient)
         self.coeff_frame.pack(), coeff_scale.pack(padx=5, pady=2)
@@ -107,15 +115,18 @@ class Editor:
                                   self.canvas.winfo_reqheight() - 185, anchor="se", window=self.coeff_frame, tags='coefficient', state="hidden")
         self.thresh_frame = LabelFrame(self.root, text=f'Threshold: {self.norm_thresh.get()}',
                                   font=Font(family=families()[40], size=10),
-                                  background="gray30", foreground='white')
+                                  background="#3C3F41", foreground='white')
         thresh_scale = ttkScale(self.thresh_frame, from_=5, to=250, orient=HORIZONTAL, variable=self.norm_thresh,
                                length=105, command=self.update_thresh)
         thresh_scale.bind("<ButtonRelease-1>", lambda _: self.apply_transform_matrix())
         self.thresh_frame.pack(), thresh_scale.pack(padx=5, pady=2)
         self.canvas.create_window(self.canvas.winfo_reqwidth() - self.btn_dec.winfo_reqwidth() // 2,
                                   self.canvas.winfo_reqheight() - 230, anchor="se", window=self.thresh_frame, tags='threshold', state="hidden")
-        self.play_gif = Button(self.root, text='\u23F8', width=0, height=0, background='#2B2B2B', foreground='gray45', relief='raised',
-                               activebackground='gray30', font='Helvetica 25', borderwidth=1, command=self.toggle_play_gif)
+        clearbtn = Button(self.root, text='\u27F2', width=3, height=0, background='#2B2B2B', foreground='#AFB1B3', relief='raised',
+                          activebackground='#AFB1B3', font='Courier 21', borderwidth=0, command=lambda: (self.curr_theme.set('none'), self.apply_color_matrix()))
+        self.play_gif = Button(self.root, text='\u23F8', width=0, height=0, background='#2B2B2B', foreground='#AFB1B3', relief='raised',
+                               activebackground='#AFB1B3', font='Courier 20', borderwidth=0, command=self.toggle_play_gif)
+        self.canvas.create_window(20, self.canvas.winfo_reqheight() - 2*self.play_gif.winfo_reqheight() - 55, anchor="nw", window=clearbtn, tags='clear', state="hidden")
         for i in range(4):
             self.rbtns.append(Radiobutton(self.root, text=('R', 'G', 'B', 'All')[i], variable=self.channel_id, value=(1, 2, 3, 0)[i],
                                bg='#2B2B2B', width=2, padx=5, pady=0, indicatoron=False, fg=('#FFB6B6', '#B6FFB9', '#B6D5FF', '#C5C5C5')[i],
@@ -175,6 +186,8 @@ class Editor:
         if ret:
             self.f_path = ret
             self.clear_buffers()
+            self.channel_id.set(0)
+            self.canvas.delete('placeholder')
             if self.f_path[-3:] == 'gif':
                 with Image.open(self.f_path) as gif:
                     self.FRAME_COUNT, self.CURR_FRAME = gif.n_frames, 0
@@ -188,8 +201,7 @@ class Editor:
                     del tmpfrm
                     gccollect()
                 if not self.play_gif.winfo_ismapped():
-                    self.playbtnid = self.canvas.create_window(self.canvas.winfo_reqwidth()//2,
-                                                           self.canvas.winfo_reqheight() - self.play_gif.winfo_reqheight() - 50,
+                    self.playbtnid = self.canvas.create_window(20, self.canvas.winfo_reqheight() - self.play_gif.winfo_reqheight() - 50,
                                                            anchor="nw", window=self.play_gif)
 
                 self.animate(0)
@@ -212,6 +224,7 @@ class Editor:
             self.canvas.itemconfigure('channel', state="normal")
             self.canvas.itemconfigure('intensity', state="normal")
             self.canvas.itemconfigure('coefficient', state="normal")
+            self.canvas.itemconfigure('clear', state="normal")
             self.get_size()
             self.orig_file_size = self.FILE_SIZE
             del ret, scale_factor
@@ -420,7 +433,7 @@ class Editor:
             self.filter_timer = None
 
     def toggle_scale(self):
-        if self.norm_method.get() in ['clip', 'modulo']:
+        if self.norm_method.get() in ['clip', 'modulo', 'abs', 'inverse']:
             self.canvas.itemconfigure('threshold', state="hidden")
         else:
             self.canvas.itemconfigure('threshold', state="normal")
@@ -510,9 +523,16 @@ class Editor:
                     norm_ret = clip(ret, 0, 255)
                 case 'modulo':
                     norm_ret = ret % 255
+                case 'abs':
+                    norm_ret = abs(ret)
+                case 'inverse':
+                    norm_ret = 255 - abs(ret)
                 case 'threshold':
                     norm_ret = ret.copy()
                     norm_ret[ret <= self.norm_thresh.get()], norm_ret[ret > self.norm_thresh.get()] = 0, 255
+                case 'inv_threshold':
+                    norm_ret = ret.copy()
+                    norm_ret[ret <= self.norm_thresh.get()], norm_ret[ret > self.norm_thresh.get()] = 255, 0
             self.progress_bar.step(1)
             if self.f_path[-3:] == 'gif':
                 self.saveframes.append(Image.fromarray(uint8(norm_ret)))
