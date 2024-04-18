@@ -56,6 +56,8 @@ class Editor:
         self.root.resizable(False, False)
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.init_canvas()
+        if not path.exists(f'{self.dir_path}\\bin'):
+            makedirs(f'{self.dir_path}\\bin')
         file_menu = Menu(self.menubar, tearoff=False)
         self.menubar.add_cascade(label="File", menu=file_menu)
         file_menu.add_command(label="Open", command=self.open_file)
