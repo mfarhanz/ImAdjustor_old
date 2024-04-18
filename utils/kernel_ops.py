@@ -25,20 +25,20 @@ def ordered_dither(arr, fltr, output_arr, theta, dither_method):
         check_values = fltr[x_indices, y_indices]
     if len(fltr.shape) == 1:
         res = where(arr < theta, 0, 255)
-    elif dither_method == 'inv_min_max':
+    elif dither_method == 'Min-Max (Inverted)':
         res = where(arr < check_values, 255, 0)
-    elif dither_method == 'set_to_matrix':
+    elif dither_method == 'Set to Matrix':
         res = where(arr < check_values, arr, check_values*2)
-    elif dither_method == 'inv_set_to_matrix':
+    elif dither_method == 'Set to Matrix (Inverted)':
         res = where(arr < check_values, arr*2, check_values)
-    elif dither_method == 'round':
+    elif dither_method == 'Round':
         res = where(arr < check_values, npround(arr / theta) * 5, arr)
-    elif dither_method == 'mod_round':
+    elif dither_method == 'Rounded Modulo':
         res = where(arr < check_values, mod((arr + check_values), 255), mod((arr - check_values), 255)*2)
-    elif dither_method == 'gamma_correct':
+    elif dither_method == 'Gamma Correct':
         gamma = 0.7+((theta-5)/245)*1.5
         res = where(arr ** (1/gamma) < check_values, arr ** (1/gamma), arr ** (1/(gamma-0.05)))
-    elif dither_method == 'perturb':
+    elif dither_method == 'Perturb':
         res = where(arr < check_values + uniform(-theta//8, theta//8, size=check_values.shape), 0, 255)
     else:
         res = where(arr < check_values, 0, 255)

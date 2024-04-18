@@ -1,51 +1,47 @@
-from math import cos, sin, log
 from random import uniform
 
 color_matrix = {
-    'none': lambda _: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0),
-    'custom': lambda val: (val[0], 0, 0, 0, 0, val[1], 0, 0, 0, 0, val[2], 0),
-    'rotation': lambda val: (cos(val), -sin(val), 0, 0, sin(val), cos(val), 0, 0, 0, 0, 1, 0),
-    'factor': lambda val: (val/25+1, 0, 0, 0, 0, val/25+1, 0, 0, 0, 0, val/25+1, 0),
-    'intensity': lambda val: (1, 0, 0, val*1.2, 0, 1, 0, val*1.2, 0, 0, 1, val*1.2),
-    'log': lambda val: (log(abs(val)) % 1, 0, 0, 0, 0, log(abs(val)) % 1, 0, 0, 0, 0, log(abs(val)) % 1, 0),
-    'sine': lambda val: (sin(val), 0, 0, 0, 0, sin(val), 0, 0, 0, 0, sin(val), 0),
-    'cie_xyz': lambda val: (0.412453, 0.357580, 0.180423, val, 0.212671, 0.715160,
+    'None': lambda _: (1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0),
+    'Custom': lambda val: (val[0], 0, 0, 0, 0, val[1], 0, 0, 0, 0, val[2], 0),
+    'Factor': lambda val: (val/25+1, 0, 0, 0, 0, val/25+1, 0, 0, 0, 0, val/25+1, 0),
+    'Intensity': lambda val: (1, 0, 0, val*1.2, 0, 1, 0, val*1.2, 0, 0, 1, val*1.2),
+    'CIE_XYZ': lambda val: (0.412453, 0.357580, 0.180423, val, 0.212671, 0.715160,
                             0.072169, val, 0.019334, 0.119193, 0.950227, val),
-    'cmyk': lambda val: (0.4124, 0.3576, 0.1805, val, 0.2126, 0.7152, 0.0722, val, 0.0193, 0.1192, 0.9505, val),
-    'lab': lambda val: (0.4124, 0.3576, 0.1805, val, 0.2126, 0.7152, 0.0722, val, 0.0193, 0.1192, 0.9505, val),
-    'yuv': lambda val: (0.299, 0.587, 0.114, val, -0.14713, -0.28886, 0.436, val, 0.615, -0.51499, -0.10001, val),
-    'gray': lambda val: (0.299, 0.587, 0.114, val, 0.299, 0.587, 0.114, val, 0.299, 0.587, 0.114, val),
-    'sepia': lambda val: (0.393, 0.769, 0.189, val, 0.349, 0.686, 0.168, val, 0.272, 0.534, 0.131, val),
-    'tint_c_r': lambda val: (1, 0, 0, val, 0, 1, 0, -val, 0, 0, 1, -val),
-    'tint_m_g': lambda val: (1, 0, 0, -val, 0, 1, 0, val, 0, 0, 1, -val),
-    'tint_y_b': lambda val: (1, 0, 0, -val, 0, 1, 0, -val, 0, 0, 1, val),
-    'color_balance': lambda val: (1.5, 0, 0, val, 0, 1, 0, val, 0, 0, 0.8, val),
-    'true_color': lambda val: (1.87, -0.79, -0.08, val, -0.20, 1.64, -0.44, val, 0.03, -0.55, 1.52, val),
-    'random': lambda val: (uniform(0.5, 0.8)+1/val, 0, 0, 0, 0, uniform(0.5, 0.6)+1/val, 0, 0,
+    'CMYK': lambda val: (0.4124, 0.3576, 0.1805, val, 0.2126, 0.7152, 0.0722, val, 0.0193, 0.1192, 0.9505, val),
+    'LAB': lambda val: (0.4124, 0.3576, 0.1805, val, 0.2126, 0.7152, 0.0722, val, 0.0193, 0.1192, 0.9505, val),
+    'YUV': lambda val: (0.299, 0.587, 0.114, val, -0.14713, -0.28886, 0.436, val, 0.615, -0.51499, -0.10001, val),
+    'Grayscale': lambda val: (0.299, 0.587, 0.114, val, 0.299, 0.587, 0.114, val, 0.299, 0.587, 0.114, val),
+    'Sepia': lambda val: (0.393, 0.769, 0.189, val, 0.349, 0.686, 0.168, val, 0.272, 0.534, 0.131, val),
+    'Tint(Cyan-Red)': lambda val: (1, 0, 0, val, 0, 1, 0, -val, 0, 0, 1, -val),
+    'Tint(Magenta-Green)': lambda val: (1, 0, 0, -val, 0, 1, 0, val, 0, 0, 1, -val),
+    'Tint(Yellow-Blue)': lambda val: (1, 0, 0, -val, 0, 1, 0, -val, 0, 0, 1, val),
+    'Color Balance': lambda val: (1.5, 0, 0, val, 0, 1, 0, val, 0, 0, 0.8, val),
+    'True Color': lambda val: (1.87, -0.79, -0.08, val, -0.20, 1.64, -0.44, val, 0.03, -0.55, 1.52, val),
+    'Random': lambda val: (uniform(0.5, 0.8)+1/val, 0, 0, 0, 0, uniform(0.5, 0.6)+1/val, 0, 0,
                            0, 0, uniform(0.2, 0.6)+1/val, 0),
-    'bluish': lambda val: (-1, -2, -1, val, 1, 0, 0, val, 1, 0, 1, val),
-    'hellish': lambda val: (1, 0, 0, val, 0, 1, -1, val, 0, -1, 1, val),
-    'hellish2': lambda val: (-1.8, 1, 0.8, val, -1, 0, 0, val, 0, -1, 1, val),
-    'hellish3': lambda val: (0.3, -0.3, 0.9, val, 1.8, -1, 0, val, -1, 0, 0.4, val),
-    'ghostly': lambda val: (-1, 1, 0, val, -1, 0.5, 1, val, 0, 1, 1, val),
-    'evil': lambda val: (-1.8, 1, 0.8, val, -0.1, 0.3, 0, val, 0.5, -1, 1, val),
-    'evil2': lambda val: (0, 3, -2, val, -1, 1, 0.2, val, -1, 1.4, -1, val),
-    'scary': lambda val: (0, -1, 0, val, 1, -0.45, 0, val, -1, 2, -1, val),
-    'scary2': lambda val: (0, 0, 0, val, -2, 1, 0.6, val, -1, 1.4, -1, val),
-    'scary2_contrast': lambda val: (0, 0, 0, val, -1, -1, 2, val, -0.1, -0.9, 1.1, val),
-    'afterdark': lambda val: (-0.9, 0, 0, val, -0.5, -0.5, 0, val, 0.2, -0.9, 1.06, val),
+    'Bluish': lambda val: (-1, -2, -1, val, 1, 0, 0, val, 1, 0, 1, val),
+    'Hellish': lambda val: (1, 0, 0, val, 0, 1, -1, val, 0, -1, 1, val),
+    'Hellish 2': lambda val: (-1.8, 1, 0.8, val, -1, 0, 0, val, 0, -1, 1, val),
+    'Hellish 3': lambda val: (0.3, -0.3, 0.9, val, 1.8, -1, 0, val, -1, 0, 0.4, val),
+    'Ghostly': lambda val: (-1, 1, 0, val, -1, 0.5, 1, val, 0, 1, 1, val),
+    'Evil': lambda val: (-1.8, 1, 0.8, val, -0.1, 0.3, 0, val, 0.5, -1, 1, val),
+    'Evil 2': lambda val: (0, 3, -2, val, -1, 1, 0.2, val, -1, 1.4, -1, val),
+    'Scary': lambda val: (0, -1, 0, val, 1, -0.45, 0, val, -1, 2, -1, val),
+    'Scary 2': lambda val: (0, 0, 0, val, -2, 1, 0.6, val, -1, 1.4, -1, val),
+    'Scary 2 (Hi-Contrast)': lambda val: (0, 0, 0, val, -1, -1, 2, val, -0.1, -0.9, 1.1, val),
+    'Afterdark': lambda val: (-0.9, 0, 0, val, -0.5, -0.5, 0, val, 0.2, -0.9, 1.06, val),
 }
 
 filter_matrix = {
-    'blur': {
+    'Blur': {
         'kernel': ((0.1111, 0.1111, 0.1111), (0.1111, 0.1111, 0.1111), (0.1111, 0.1111, 0.1111)),
         'type': 'convolution'
     },
-    'triangle_blur': {
+    'Triangle Blur': {
         'kernel': ((0.0625, 0.125, 0.0625), (0.125, 0.25, 0.125), (0.0625, 0.125, 0.0625)),
         'type': 'convolution'
     },
-    'gaussian_blur': {
+    'Gaussian Blur': {
         'kernel': ((0.00390625, 0.015625, 0.0234375, 0.015625, 0.00390625),
                    (0.015625, 0.0625, 0.09375, 0.0625, 0.015625),
                    (0.0234375, 0.09375, 0.140625, 0.09375, 0.0234375),
@@ -53,110 +49,110 @@ filter_matrix = {
                    (0.00390625, 0.015625, 0.0234375, 0.015625, 0.00390625)),
         'type': 'convolution'
     },
-    'motion_blur': {
+    'Motion Blur': {
         'kernel': ((0, 0, 0.3333), (0, 0.3333, 0), (0.3333, 0, 0)),
         'type': 'convolution'
     },
     '1': '',
-    'high_boost': {
+    'High Boost': {
         'kernel': ((-1, -1, -1), (-1, 9, -1), (-1, -1, -1)),
         'type': 'convolution'
     },
-    'emboss': {
+    'Emboss': {
         'kernel': ((-2, -1, 0), (-1,  1, 1), (0,  1, 2)),
         'type': 'convolution'
     },
-    'sharpen': {
+    'Sharpen': {
         'kernel': ((0, -1,  0), (-1,  5, -1), (0, -1,  0)),
         'type': 'convolution'
     },
     '2': '',
-    'sobel_edge_detect_H': {
+    'Sobel Edge Detection (H)': {
         'kernel': ((-1, 0, 1), (-2, 0, 2), (-1, 0, 1)),
         'type': 'convolution'
     },
-    'sobel_edge_detect_V': {
+    'Sobel Edge Detection (V)': {
         'kernel': ((-1, -2, -1), (0, 0, 0), (1, 2, 1)),
         'type': 'convolution'
     },
-    'prewitt_edge_detect_H': {
+    'Prewitt Edge Detection (H)': {
         'kernel': ((-1, -1, -1), (0, 0, 0), (1, 1, 1)),
         'type': 'convolution'
     },
-    'prewitt_edge_detect_V': {
+    'Prewitt Edge Detection (V)': {
         'kernel': ((-1, 0, 1), (-1, 0, 1), (-1, 0, 1)),
         'type': 'convolution'
     },
-    'scharr_edge_detect_H': {
+    'Scharr Edge Detection (H)': {
         'kernel': ((-3, 0, 3), (-10, 0, 10), (-3, 0, 3)),
         'type': 'convolution'
     },
-    'scharr_edge_detect_V': {
+    'Scharr Edge Detection (V)': {
         'kernel': ((-3, -10, -3), (0, 0, 0), (3, 10, 3)),
         'type': 'convolution'
     },
-    'frei_chen_edge_detect_H': {
+    'Frei-Chen Edge Detection (H)': {
         'kernel': ((-1, -1.4142, -1), (0, 0, 0), (1, 1.4142, 1)),
         'type': 'convolution'
     },
-    'frei_chen_edge_detect_V': {
+    'Frei-Chen Edge Detection (V)': {
         'kernel': ((-1, 0, 1), (-1.4142, 0, 1.4142), (-1, 0, 1)),
         'type': 'convolution'
     },
-    'kirsch_compass_N': {
+    'Kirsch Compass Mask (N)': {
         'kernel': ((-3, -3, 5), (-3, 0, 5), (-3, -3, 5)),
         'type': 'convolution'
     },
-    'kirsch_compass_NW': {
+    'Kirsch Compass Mask (NW)': {
         'kernel': ((-3, 5, 5), (-3, 0, 5), (-3, -3, -3)),
         'type': 'convolution'
     },
-    'kirsch_compass_W': {
+    'Kirsch Compass Mask (W)': {
         'kernel': ((5, 5, 5), (-3, 0, -3), (-3, -3, -3)),
         'type': 'convolution'
     },
-    'kirsch_compass_SW': {
+    'Kirsch Compass Mask (SW)': {
         'kernel': ((5, 5, -3), (5, 0, -3), (-3, -3, -3)),
         'type': 'convolution'
     },
-    'kirsch_compass_S': {
+    'Kirsch Compass Mask (S)': {
         'kernel': ((5, -3, -3), (5, 0, -3), (5, -3, -3)),
         'type': 'convolution'
     },
-    'kirsch_compass_SE': {
+    'Kirsch Compass Mask (SE)': {
         'kernel': ((-3, -3, -3), (5, 0, -3), (5, 5, -3)),
         'type': 'convolution'
     },
-    'kirsch_compass_E': {
+    'Kirsch Compass Mask (E)': {
         'kernel': ((-3, -3, -3), (-3, 0, -3), (5, 5, 5)),
         'type': 'convolution'
     },
-    'kirsch_compass_NE': {
+    'Kirsch Compass Mask (NE)': {
         'kernel': ((-3, -3, -3), (-3, 0, 5), (-3, 5, 5)),
         'type': 'convolution'
     },
-    'laplacian': {
+    'Laplacian': {
         'kernel': ((0, 1, 0), (1, -4, 1), (0, 1, 0)),
         'type': 'convolution'
     },
-    'inv_laplacian': {
+    'Inverse Laplacian': {
         'kernel': ((0, -1,  0), (-1,  4, -1), (0, -1,  0)),
         'type': 'convolution'
     },
-    'high_pass': {
+    'High Pass': {
         'kernel': ((-1, -1, -1), (-1,  8, -1), (-1, -1, -1)),
         'type': 'convolution'
     },
-    'laplacian_5x5': {
+    'Laplacian (5x5)': {
         'kernel': ((0, -2, -4, -2, 0), (-2, -4, 8, -4, -2), (-4, 8, 16, 8, -4), (-2, -4, 8, -4, -2),
                    (0, -2, -4, -2, 0)),
         'type': 'convolution'
     },
-    'farid_transform': {
+    'Farid Transform': {
         'kernel': ((-0.229879, 0.540242, 0.229879), (0.425827, 0, -0.425827), (0.229879, -0.540242, -0.229879)),
         'type': 'convolution'
     },
-    'deriv_of_gaussian': {
+    'Derivative of Gaussian': {
         'kernel': ((-0.01724138, -0.03448276, 0, 0.03448276, 0.01724138),
                    (-0.06896552, -0.17241379, 0, 0.17241379, 0.06896552),
                    (-0.12068966, -0.29310345, 0, 0.29310345, 0.12068966),
@@ -164,7 +160,7 @@ filter_matrix = {
                    (-0.01724138, -0.03448276, 0, 0.03448276, 0.01724138)),
         'type': 'convolution'
     },
-    'laplac_of_gaussian': {
+    'Laplacian of Gaussian': {
         'kernel': ((0, 0, 0.0125, 0.0125, 0.0125, 0, 0),
                    (0, 0.0125, 0.0625, 0.075, 0.0625, 0.0125, 0),
                    (0.0125, 0.0625, 0, -0.1375, 0, 0.0625, 0.0125),
@@ -175,11 +171,11 @@ filter_matrix = {
         'type': 'convolution'
     },
     '3': '',
-    'negative': {
+    'Negative': {
         'kernel': ((0, 0, 0), (0, -1, 0), (0, 0, 0)),
         'type': 'convolution'
     },
-    'hvs_1': {
+    'HVS1': {
         'kernel': ((0.00085, 0.00166, 0.00294, 0.00458, 0.0061, 0.00674, 0.0061, 0.00458, 0.00294, 0.00166, 0.00085),
                    (0.00166, 0.00349, 0.00674, 0.01142, 0.01619, 0.01832, 0.01619, 0.01142, 0.00674, 0.00349, 0.00166),
                    (0.00294, 0.00674, 0.01437, 0.02717, 0.04233, 0.04979, 0.04233, 0.02717, 0.01437, 0.00674, 0.00294),
@@ -193,7 +189,7 @@ filter_matrix = {
                    (0.00085, 0.00166, 0.00294, 0.00458, 0.0061, 0.00674, 0.0061, 0.00458, 0.00294, 0.00166, 0.00085)),
         'type': 'convolution'
     },
-    'hvs_2': {
+    'HVS2': {
         'kernel': ((0.00193, 0.00595, 0.01426, 0.02665, 0.03877, 0.04394, 0.03877, 0.02665, 0.01426, 0.00595, 0.00193),
                    (0.00595, 0.01832, 0.04394, 0.08208, 0.11943, 0.13534, 0.11943, 0.08208, 0.04394, 0.01832, 0.00595),
                    (0.01426, 0.04394, 0.1054, 0.19691, 0.2865, 0.32465, 0.2865, 0.19691, 0.1054, 0.04394, 0.01426),
@@ -208,20 +204,24 @@ filter_matrix = {
         'type': 'convolution'
     },
     '4': '',
-    'screen': {
+    'Row Dither': {
         'kernel': ((0, ), (1, )),
         'type': 'ordered dither'
     },
-    'bayer_2x2': {
+    'Bayer Dither (2x2)': {
         'kernel': ((0, 0.5), (0.75, 0.25)),
         'type': 'ordered dither'
     },
-    'bayer_4x4': {
+    'Bayer Dither (3x3)': {
+        'kernel': ((0.1111, 0.4444, 0.7778), (0.6667, 0, 0.2222), (0.3333, 0.8889, 0.5556)),
+        'type': 'ordered dither'
+    },
+    'Bayer Dither (4x4)': {
         'kernel': ((0, 0.5, 0.125, 0.625), (0.75, 0.25, 0.875, 0.375),
                    (0.1875, 0.6875, 0.0625, 0.5625), (0.9375, 0.4375, 0.8125, 0.3125)),
         'type': 'ordered dither'
     },
-    'bayer_8x8': {
+    'Bayer Dither (8x8)': {
         'kernel': ((0, 0.75, 0.1875, 0.9375, 0.046875, 0.796875, 0.234375, 0.984375),
                    (0.5, 0.25, 0.6875, 0.9375, 0.4375, 0.546875, 0.296875, 0.734375),
                    (0.125, 0.875, 0.0625, 0.8125, 0.171875, 0.921875, 0.109375, 0.859375),
@@ -232,56 +232,104 @@ filter_matrix = {
                    (0.65625, 0.40625, 0.59375, 0.34375, 0.640625, 0.390625, 0.578125, 0.328125)),
         'type': 'ordered dither'
     },
-    'checkerboard_2x2': {
+    'Checkerboard Dither (2x2)': {
         'kernel': ((1, 0), (0, 1)),
         'type': 'ordered dither'
     },
-    'checkerboard_3x3': {
+    'Checkerboard Dither (3x3)': {
         'kernel': ((1, 0, 1), (0, 1, 0), (1, 0, 1)),
         'type': 'ordered dither'
     },
-    'checkerboard_4x4': {
+    'Checkerboard Dither (4x4)': {
         'kernel': ((1, 0, 1, 0), (0, 1, 0, 1), (1, 0, 1, 0), (0, 1, 0, 0)),
         'type': 'ordered dither'
     },
-    'comb': {
+    'Comb Dither (H)': {
         'kernel': ((0.6, 0.2, 0, 0.4, 0.8), (0.66667, 0.26667, 0.066667, 0.46667, 0.86667),
                    (0.73333, 0.33333, 0.13333, 0.53333, 0.93333)),
         'type': 'ordered dither'
     },
-    'binary_thresh': {
+    'Comb Dither (V)': {
+        'kernel': ((0.6, 0.6667, 0.7333), (0.2, 0.2667, 0.3333), (0, 0.0667, 0.1333),
+                   (0.4, 0.4667, 0.5333), (0.8, 0.8667, 0.9333)),
+        'type': 'ordered dither'
+    },
+    'Binary Thresh': {
         'kernel': (1,),
         'type': 'ordered dither'
     },
-    'non_rect_1': {
-        'kernel': ((0, 0.8, 0), (0.6, 0, 0.2), (0, 0.4, 0)),
+    'Non-Rectangular1 Dither': {
+        'kernel': ((0.8333, 0.625, 0, 0.2083, 0.4167), (0, 0.2083, 0.4167, 0.8333, 0.625),
+                   (0, 0.2083, 0.4167, 0.8333, 0.625), (0.625, 0, 0.2083, 0.4167, 0.8333),
+                   (0.2083, 0.4167, 0.8333, 0.625, 0)),
         'type': 'ordered dither'
     },
-    'non_rect_2': {
+    'Non-Rectangular2 Dither': {
         'kernel': ((0, 0.5, 0.25, 0), (0.75, 0, 0.625, 0.375), (0, 0.875, 0.125, 0)),
         'type': 'ordered dither'
     },
-    'tpdf_dither': {
-        'kernel': ((0.25, 0.5, 0.75, 1), (0.5, 0.75, 1, 0.75), (0.75, 1, 0.75, 0.5),
-                   (1, 0.75, 0.5, 0.25)),
+    'Non-Rectangular (8x8)': {
+        'kernel': ((0.375, 0.5, 0.25, 0.875, 0.125, 0.75, 0, 0.625), (0.75, 0, 0.625, 0.375, 0.5, 0.25, 0.875, 0.125),
+                   (0.25, 0.875, 0.125, 0.75, 0, 0.625, 0.375, 0.5), (0.625, 0.375, 0.5, 0.25, 0.875, 0.125, 0.75, 0),
+                   (0.125, 0.75, 0, 0.625, 0.375, 0.5, 0.25, 0.875), (0.5, 0.25, 0.875, 0.125, 0.75, 0, 0.625, 0.375),
+                   (0, 0.625, 0.375, 0.5, 0.25, 0.875, 0.125, 0.75), (0.875, 0.125, 0.75, 0, 0.625, 0.375, 0.5, 0.25)),
         'type': 'ordered dither'
     },
-    'dispersed_dot': {
-        'kernel': ((0.375, 0.4375, 0.5, 0.5625), (0.3125, 0, 0.0625, 0.625),
-                   (0.25, 0.1875, 0.125, 0.6875), (0.9375, 0.875, 0.8125, 0.75)),
-        'type': 'ordered dither'
-    },
-    'clustered_dot_1': {
-        'kernel': ((0.88, 0.56, 0.4, 0.68, 0.84), (0.72, 0.24, 0.08, 0.2, 0.52),
-                   (0.44, 0.12, 0, 0.04, 0.36), (0.6, 0.28, 0.16, 0.32, 0.8), (0.92, 0.76, 0.48, 0.64, 0.96)),
-        'type': 'ordered dither'
-    },
-    'clustered_dot_2': {
+    'Ulichney Dither': {
         'kernel': ((0.75, 0.3125, 0.375, 0.8125), (0.25, 0, 0.0625, 0.4375),
                    (0.6875, 0.1875, 0.125, 0.5), (0.9375, 0.625, 0.5625, 0.875)),
         'type': 'ordered dither'
     },
-    'clustered_dot_8x8': {
+    '45-Degree Dither (4x4)': {
+        'kernel': ((0.4444, 0.2222, 0.7778, 0.5556), (0.3333, 0.1111, 0.8889, 0.6667),
+                   (0.7778, 0.5556, 0.4444, 0.2222), (0.8889, 0.6667, 0.3333, 0.1111)),
+        'type': 'ordered dither'
+    },
+    'Variable Dither (2x2)': {
+        'kernel': ((-1.5, 1.5), (0.5, -0.5)),
+        'type': 'ordered dither'
+    },
+    'Variable Dither (4x4)': {
+        'kernel': ((-7.5,  0.5, -5.5,  2.5), (4.5, -3.5,  6.5, -1.5),
+                   (-4.5,  3.5, -6.5,  1.5), (7.5, -0.5,  5.5, -2.5)),
+        'type': 'ordered dither'
+    },
+    'TPDF Dither': {
+        'kernel': ((0.25, 0.5, 0.75, 1), (0.5, 0.75, 1, 0.75), (0.75, 1, 0.75, 0.5),
+                   (1, 0.75, 0.5, 0.25)),
+        'type': 'ordered dither'
+    },
+    'Dispersed Dot (4x4)': {
+        'kernel': ((0.375, 0.4375, 0.5, 0.5625), (0.3125, 0, 0.0625, 0.625),
+                   (0.25, 0.1875, 0.125, 0.6875), (0.9375, 0.875, 0.8125, 0.75)),
+        'type': 'ordered dither'
+    },
+    'Dispersed Dot (6x6)': {
+        'kernel': ((0.8889, 0.4444, 0.5556, 0.9444, 0.5, 0.6111), (0.3333, 0, 0.1111, 0.3889, 0.0556, 0.1667),
+                   (0.7778, 0.2222, 0.6667, 0.8333, 0.2778, 0.7222), (0.9722, 0.5278, 0.6389, 0.9167, 0.4722, 0.5833),
+                   (0.4167, 0.0833, 0.1944, 0.3611, 0.02778, 0.1389), (0.8611, 0.3056, 0.75, 0.8056, 0.25, 0.6944)),
+        'type': 'ordered dither'
+    },
+    'Clustered Dot (4x4)': {
+        'kernel': ((0.75, 0.3125, 0.375, 0.8125), (0.25, 0, 0.0625, 0.4375),
+                   (0.6875, 0.1875, 0.125, 0.5), (0.9375, 0.625, 0.5625, 0.875)),
+        'type': 'ordered dither'
+    },
+    'Clustered Dot (5x5)': {
+        'kernel': ((0.88, 0.56, 0.4, 0.68, 0.84), (0.72, 0.24, 0.08, 0.2, 0.52),
+                   (0.44, 0.12, 0, 0.04, 0.36), (0.6, 0.28, 0.16, 0.32, 0.8), (0.92, 0.76, 0.48, 0.64, 0.96)),
+        'type': 'ordered dither'
+    },
+    'Clustered Dot (6x6)': {
+        'kernel': ((0.4444, 0.3333, 0.3889, 0.5, 0.6111, 0.5556),
+                   (0.2778, 0, 0.05556, 0.6667, 0.9444, 0.8889),
+                   (0.2222, 0.1667, 0.1111, 0.7222, 0.7778, 0.8333),
+                   (0.5, 0.6111, 0.5556, 0.4444, 0.3333, 0.4444),
+                   (0.6667, 0.9444, 0.8889, 0.2778, 0, 0.0556),
+                   (0.7222, 0.7778, 0.8333, 0.2222, 0.1667, 0.1111)),
+        'type': 'ordered dither'
+    },
+    'Clustered Dot (8x8)': {
         'kernel': ((0.375, 0.15625, 0.1875, 0.40625, 0.546875, 0.734375, 0.765625, 0.578125),
                    (0.125, 0, 0.03125, 0.21875, 0.703125, 0.921875, 0.953125, 0.796875),
                    (0.34375, 0.09375, 0.0625, 0.25, 0.671875, 0.890625, 0.984375, 0.828125),
@@ -292,35 +340,68 @@ filter_matrix = {
                    (0.5, 0.625, 0.84375, 0.59375, 0.484375, 0.328125, 0.296875, 0.453125)),
         'type': 'ordered dither'
     },
-    'floyd_steinberg': {
+    'Floyd-Steinberg Dither': {
         'kernel': ((0, 0, 0), (0, 1, 0.4375), (0.1875, 0.3125, 0.0625)),
         'type': 'error diffusion'
     },
-    'jarvis_judice_ninke': {
+    'Jarvis-Judice-Ninke Dither': {
         'kernel': ((0, 0, 0, 0, 0), (0, 0, 0, 0, 0,), (0, 0, 1, 0.145833, 0.104167),
                    (0.0625, 0.104167, 0.145833, 0.104167, 0.0625),
                    (0.02083333, 0.0625, 0.10416667, 0.0625, 0.02083333)),
         'type': 'error diffusion'
     },
-    'stucki_dither': {
+    'Stucki Dither': {
         'kernel': ((0, 0, 0, 0, 0), (0, 0, 0, 0, 0), (0, 0, 1, 0.190476, 0.095238),
                    (0.047619, 0.095238, 0.190476, 0.095238, 0.047619),
                    (0.023809, 0.047619, 0.095238, 0.047619, 0.023809)),
         'type': 'error diffusion'
     },
-    'atkinson_dither': {
+    'Atkinson Dither': {
         'kernel': ((0, 0, 0, 0, 0), (0, 0, 0, 0, 0), (0, 0, 1, 0.125, 0.125),
                    (0, 0.125, 0.125, 0.125, 0), (0, 0, 0.125, 0, 0)),
         'type': 'error diffusion'
     },
-    'burkes_dither': {
+    'Burkes Dither': {
         'kernel': ((0, 0, 0, 0, 0), (0, 0, 0, 0, 0), (0, 0, 1, 0.25, 0.125),
                    (0.0625, 0.125, 0.25, 0.125, 0.0625), (0, 0, 0, 0, 0)),
         'type': 'error diffusion'
     },
-    'sierra_dither': {
+    'Sierra Dither': {
         'kernel': ((0, 0, 0, 0, 0), (0, 0, 0, 0, 0), (0, 0, 1, 0.15625, 0.09375),
                    (0.0625, 0.125, 0.15625, 0.125, 0.0625), (0, 0.0625, 0.09375, 0.0625, 0)),
         'type': 'error diffusion'
-    }
+    },
+    'Sierra 2-Row Dither': {
+        'kernel': ((0, 0, 1, 0.25, 0.1875), (0.0625, 0.125, 0.1875, 0.125, 0.0625)),
+        'type': 'error diffusion'
+    },
+    'Sierra Lite Dither': {
+        'kernel': ((0, 1, 0.5), (0.25, 0.25, 0)),
+        'type': 'error diffusion'
+    },
+    'Fan Dither': {
+        'kernel': ((0, 0, 1, 0.4375), (0.0625, 0.1875, 0.3125, 0)),
+        'type': 'error diffusion'
+    },
+    'Shiau-Fan Dither': {
+        'kernel': ((0, 0, 1, 0.5), (0.125, 0.125, 0.25, 0)),
+        'type': 'error diffusion'
+    },
+    'Shiau-Fan2 Dither': {
+        'kernel': ((0, 0, 0, 1, 0.5), (0.0625, 0.0625, 0.125, 0.25, 0)),
+        'type': 'error diffusion'
+    },
+    'Stevenson-Arce Dither': {
+        'kernel': ((0, 0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0, 0),
+                   (0, 0, 0, 1, 0, 0.16, 0), (0.06, 0, 0.13, 0, 0.15, 0, 0.08),
+                   (0, 0.06, 0, 0.13, 0, 0.06, 0), (0.025, 0, 0.06, 0, 0.06, 0, 0.025)),
+        'type': 'error diffusion'
+    },
+    'Steve-Pigeon Dither': {
+        'kernel': ((0, 0, 1, 0.14285714, 0.07142857),
+                   (0, 0.14285714, 0.14285714, 0.14285714, 0),
+                   (0.07142857, 0, 0.07142857, 0, 0.07142857)),
+        'type': 'error diffusion'
+    },
+
 }
