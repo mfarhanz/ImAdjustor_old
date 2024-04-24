@@ -1,6 +1,6 @@
 """
 image/gif filtering viewer tool
-p.s. needs kernel_ops.py and filters.py as a dependency
+p.s. needs kernel_ops.py and filters.py as dependencies
 """
 import tkinter
 from os import makedirs, listdir, path, remove as delfile, rename
@@ -9,7 +9,6 @@ from multiprocessing import Array
 from time import perf_counter
 from io import BytesIO
 from uuid import uuid4
-from psutil import Process
 from gc import collect as gccollect
 from random import randint, choice
 from _pickle import dump as pdump, load as pload
@@ -27,12 +26,12 @@ from utils.filters import color_matrix, filter_matrix
 
 class Editor:
     def __init__(self):
-        self.EFFECT_ACTIVE = False
+        self.EFFECT_ACTIVE, self.PANNING, self.VERBOSE = False, False, True
         self.THREAD_REF, self.GIF_CHUNKS = [], []
-        self.FRAME_COUNT, self.GIF_DUR, self.CURR_FRAME, self.FILE_SIZE, self.PROCESS_DUR = 0, 20, 0, 0, 0
+        self.FRAME_COUNT, self.GIF_DUR, self.CURR_FRAME, self.FILE_SIZE, self.PROCESS_DUR, self.ZOOM = 0, 20, 0, 0, 0, 1.0
         self.orig_width, self.orig_height, self.im_width, self.im_height, self.scrx, self.scry = 0, 0, 0, 0, 1200, 720
-        self.filter_timer, self.filter_timer2, self.loader_timer, self.frame_id, self.temp_id, self.newtkimg = [None] * 6
-        self.frames2, self.rbtns, self.clrscales, self.color_counts = [], [], [], []
+        self.filter_timer, self.filter_timer2, self.loader_timer, self.frame_id, self.temp_id, self.newtkimg, self.pilimg, self.imagebox = [None] * 8
+        self.frames2, self.rbtns, self.clrscales, self.color_counts, self.view_bindings = [], [], [], [], []
         self.dir_path, self.f_path = f'{path.dirname(path.realpath(__file__))}', None
         self.curr_filter, self.curr_theme, self.curr_overlay_filter, self.dither_opt = [None] * 4
         self.curr_intensity, self.norm_thresh, self.coefficient, self.channel_id, self.norm_method, self.intensity_red, self.intensity_green, self.intensity_blue, self.frame_pointer = [None] * 9
@@ -50,7 +49,7 @@ class Editor:
         self.canvas = Canvas(self.root, width=self.scrx, height=self.scry, background='#2B2B2B')
         self.curr_filter, self.curr_theme, self.curr_overlay_filter = StringVar(self.root, 'None'), StringVar(self.root, 'None'), StringVar(self.root, 'None')
         self.norm_method, self.dither_opt = StringVar(self.root, 'Clip'), StringVar(self.root, 'Min-Max')
-        self.curr_intensity, self.norm_thresh, self.coefficient, self.frame_pointer = IntVar(self.root, 1), IntVar(self.root, 100), IntVar(self.root, 125), IntVar(self.root, 0)
+        self.curr_intensity, self.norm_thresh, self.coefficient, self.frame_pointer, vbs = IntVar(self.root, 1), IntVar(self.root, 100), IntVar(self.root, 125), IntVar(self.root, 0), IntVar(value=1)
         self.channel_id, self.intensity_red, self.intensity_green, self.intensity_blue = IntVar(self.root, 0), IntVar(self.root, 85), IntVar(self.root, 85), IntVar(self.root, 85)
         self.menubar = Menu(self.root)
         self.root.config(menu=self.menubar)
@@ -64,6 +63,12 @@ class Editor:
         file_menu.add_command(label="Open", command=self.open_file)
         file_menu.add_command(label="Save As", command=self.save_file)
         file_menu.add_command(label="Clear", command=self.clear_screen)
+        view_menu = Menu(self.menubar, tearoff=False)
+        self.menubar.add_cascade(label="View", menu=view_menu)
+        view_menu.add_radiobutton(label="Full", command=lambda: self.toggle_image_view(1))
+        view_menu.add_radiobutton(label="Static", command=lambda: self.toggle_image_view(0))
+        view_menu.invoke(1)
+        view_menu.add_checkbutton(label="Verbose", command=lambda: setattr(self, 'VERBOSE', False if self.VERBOSE else True), variable=vbs)
         themes_menu = Menu(self.menubar, tearoff=False)
         self.menubar.add_cascade(label="Themes", menu=themes_menu)
         for theme in list(color_matrix.keys()):
@@ -240,7 +245,7 @@ class Editor:
                 if self.FILE_SIZE:
                     return
                 self.canvas.create_image(self.canvas.winfo_reqwidth()//100//2*90, self.canvas.winfo_reqheight()/100//2*90, anchor=NW, image=frames[i], tags='loader')
-                self.canvas.create_text(self.canvas.winfo_reqwidth() // 2, self.canvas.winfo_reqheight() // 2 + 65,
+                self.canvas.create_text(self.canvas.winfo_reqwidth() // 2 + 5, self.canvas.winfo_reqheight() // 2 + 70,
                                         text='Loading', font=Font(family=families()[40], size=20), fill='#AFB1B3', tags='loader')
                 i += 1
                 if i >= n:
@@ -259,9 +264,11 @@ class Editor:
     def clear_buffers(self):
         self.GIF_CHUNKS.clear()
         self.color_counts.clear()
+        self.view_bindings.clear()
+        self.EFFECT_ACTIVE, self.PANNING = False, False
         self.orig_width, self.orig_height, self.im_width, self.im_height = 0, 0, 0, 0
-        self.frame_id, self.newtkimg = [None] * 2
-        self.process_order, self.wrap_cntr, self.PROCESS_DUR, self.GIF_DUR, self.FRAME_COUNT, self.FILE_SIZE = '', 0, 0, 0, 0, 0
+        self.frame_id, self.newtkimg, self.pilimg, self.imagebox = [None] * 4
+        self.process_order, self.wrap_cntr, self.PROCESS_DUR, self.GIF_DUR, self.FRAME_COUNT, self.FILE_SIZE, self.ZOOM = '', 0, 0, 0, 0, 0, 1.0
         self.canvas.delete("mainimg")
         self.curr_filter.set('None')
         self.curr_theme.set('None')
@@ -313,15 +320,17 @@ class Editor:
                             self.update_color_counts(frame)
                     self.get_size()
                     gccollect()
-                if not self.play_gif.winfo_ismapped():
-                    self.canvas.create_window(20, self.canvas.winfo_reqheight() - self.play_gif.winfo_reqheight() - 50,
-                                              anchor="nw", window=self.play_gif, tags='play')
-                self.frame_carousel.configure(from_=1, to=self.FRAME_COUNT-1)
-                self.canvas.itemconfigure('carousel', state="normal")
                 if threaded:
                     self.root.after_cancel(self.loader_timer)
                     loader_th.join()
                     self.canvas.delete("loader")
+                if not self.play_gif.winfo_ismapped():
+                    self.canvas.create_window(20, self.canvas.winfo_reqheight() - self.play_gif.winfo_reqheight() - 50,
+                                              anchor="nw", window=self.play_gif, tags='play')
+                self.menubar.winfo_children()[1].entryconfig(0, state="disabled")
+                self.menubar.winfo_children()[1].entryconfig(1, state="disabled")
+                self.frame_carousel.configure(from_=1, to=self.FRAME_COUNT-1)
+                self.canvas.itemconfigure('carousel', state="normal")
                 if not self.filter_timer:
                     self.toggle_play_gif()
             elif self.f_path[-3:] in ['jpg', 'jpeg', 'png', 'bmp']:
@@ -347,6 +356,8 @@ class Editor:
                     self.canvas.create_image(0, 0, image=self.newtkimg, anchor=NW, tags='mainimg')
                 self.frame_summary(self.f_path[-3:])
                 self.canvas.itemconfigure('carousel', state="hidden")
+                self.menubar.winfo_children()[1].entryconfig(0, state="normal")
+                self.menubar.winfo_children()[1].entryconfig(1, state="normal")
             self.canvas.itemconfigure('channel', state="normal")
             self.canvas.itemconfigure('intensity', state="normal")
             self.canvas.itemconfigure('coefficient', state="normal")
@@ -361,13 +372,13 @@ class Editor:
             self.temp_id = uuid4()
             self.canvas.delete('placeholder')
             im = Image.open(self.f_path)
-            if self.f_path[-3:] == 'gif' and im.n_frames > 10 and im.size[0]*im.size[1] > 80000:
+            if self.f_path[-3:] == 'gif' and im.n_frames > 10 and im.size[0]*im.size[1] > 80000 and self.VERBOSE:
                 loader_th = Thread(target=self.loading)
                 load_file_th = Thread(target=load_file)
                 self.THREAD_REF.append(load_file_th)
                 loader_th.start()
                 load_file_th.start()
-            elif self.f_path[-3:] in ['jpg', 'jpeg', 'png', 'bmp'] and im.size[0]*im.size[1] > 1000000:
+            elif self.f_path[-3:] in ['jpg', 'jpeg', 'png', 'bmp'] and im.size[0]*im.size[1] > 1000000 and self.VERBOSE:
                 loader_th = Thread(target=self.loading)
                 load_file_th = Thread(target=load_file)
                 self.THREAD_REF.append(load_file_th)
@@ -380,31 +391,32 @@ class Editor:
             del file
 
     def frame_summary(self, ftype):
-        bg_width = 200 + (len(self.curr_filter.get()) * 5, len(self.curr_theme.get()) * 5)[len(self.curr_filter.get()) <
-                                                                                           len(self.curr_theme.get())]
-        bg_height, offset, x, y = 180 if ftype == 'gif' else 140, 10, self.canvas.winfo_reqwidth() - bg_width - 15, 10
-        if len(self.process_order[self.wrap_cntr:]) > 22:
-            self.process_order += '\n\t'
-            self.wrap_cntr += 22
-        if ftype in ['png', 'jpg', 'jpeg', 'bmp']:
-            text = f"Size: {self.FILE_SIZE} MB\n" \
-                   f"Dimensions: {self.orig_width} x {self.orig_height}\n" \
-                   f"Processing time: {self.PROCESS_DUR} ms\nCurrent theme: {self.curr_theme.get()} ({self.curr_intensity.get()})\n" \
-                   f"Current filter: {self.curr_filter.get()}\nColor Count: {self.color_counts[0] if self.color_counts[0] else '20000+'}\n" \
-                   f"Applied: {self.process_order}"
-        else:
-            text = f"Size: {self.FILE_SIZE} MB\nDimensions: {self.im_width} x {self.im_height}\n" \
-                   f"Frame Count: {self.FRAME_COUNT}\nFrame Delay: {self.GIF_DUR} ms\nCurrent Frame: {self.CURR_FRAME}\n" \
-                   f"Processing time: {self.PROCESS_DUR} ms\nCurrent theme: {self.curr_theme.get()} ({self.curr_intensity.get()})\n" \
-                   f"Current filter: {self.curr_filter.get()}\nColor Count: {self.color_counts[self.CURR_FRAME] if self.color_counts[self.CURR_FRAME] else '20000+'}\n" \
-                   f"Applied: {self.process_order}"
-        tkimg = ImageTk.PhotoImage(self.trans_bg.resize((bg_width, bg_height+int(self.wrap_cntr/1.5))))
-        self.summary_bg = self.canvas.create_image(x, y, image=tkimg, anchor=NW, tags='summary')
-        self.summary_txt = self.canvas.create_text(x+offset, y+offset, text=text, anchor=NW, fill="white",
-                                                   font=Font(family=families()[40], size=10, weight='bold'), tags='summary')
-        self.canvas.new_image = tkimg
-        del tkimg
-        gccollect()
+        if self.VERBOSE:
+            bg_width = 200 + (len(self.curr_filter.get()) * 5, len(self.curr_theme.get()) * 5)[len(self.curr_filter.get()) <
+                                                                                               len(self.curr_theme.get())]
+            bg_height, offset, x, y = 180 if ftype == 'gif' else 140, 10, self.canvas.winfo_reqwidth() - bg_width - 15, 10
+            if len(self.process_order[self.wrap_cntr:]) > 22:
+                self.process_order += '\n\t'
+                self.wrap_cntr += 22
+            if ftype in ['png', 'jpg', 'jpeg', 'bmp']:
+                text = f"Size: {self.FILE_SIZE} MB\n" \
+                       f"Dimensions: {self.orig_width} x {self.orig_height}\n" \
+                       f"Processing time: {self.PROCESS_DUR} ms\nCurrent theme: {self.curr_theme.get()} ({self.curr_intensity.get()})\n" \
+                       f"Current filter: {self.curr_filter.get()}\nColor Count: {self.color_counts[0] if self.color_counts[0] else '20000+'}\n" \
+                       f"Applied: {self.process_order}"
+            else:
+                text = f"Size: {self.FILE_SIZE} MB\nDimensions: {self.im_width} x {self.im_height}\n" \
+                       f"Frame Count: {self.FRAME_COUNT}\nFrame Delay: {self.GIF_DUR} ms\nCurrent Frame: {self.CURR_FRAME}\n" \
+                       f"Processing time: {self.PROCESS_DUR} ms\nCurrent theme: {self.curr_theme.get()} ({self.curr_intensity.get()})\n" \
+                       f"Current filter: {self.curr_filter.get()}\nColor Count: {self.color_counts[self.CURR_FRAME] if self.color_counts[self.CURR_FRAME] else '20000+'}\n" \
+                       f"Applied: {self.process_order}"
+            tkimg = ImageTk.PhotoImage(self.trans_bg.resize((bg_width, bg_height+int(self.wrap_cntr/1.5))))
+            self.summary_bg = self.canvas.create_image(x, y, image=tkimg, anchor=NW, tags='summary')
+            self.summary_txt = self.canvas.create_text(x+offset, y+offset, text=text, anchor=NW, fill="white",
+                                                       font=Font(family=families()[40], size=10, weight='bold'), tags='summary')
+            self.canvas.summary = tkimg
+            del tkimg
+            gccollect()
 
     def save_file(self):
         if not self.f_path:
@@ -438,27 +450,30 @@ class Editor:
             gccollect()
 
     def get_size(self):
-        self.FILE_SIZE = 0
-        if self.f_path[-3:] == 'gif':
-            with open(f'{self.dir_path}\\bin\\{(0, 1, 2, 3)[self.channel_id.get()]}-{self.temp_id}.bin', 'rb') as gif:
-                for i in range(self.FRAME_COUNT):
+        if self.VERBOSE:
+            self.FILE_SIZE = 0
+            if self.f_path[-3:] == 'gif':
+                with open(f'{self.dir_path}\\bin\\{(0, 1, 2, 3)[self.channel_id.get()]}-{self.temp_id}.bin', 'rb') as gif:
+                    for i in range(self.FRAME_COUNT):
+                        bytestream = BytesIO()
+                        pload(gif).save(bytestream, format='GIF')
+                        gif.seek(self.GIF_CHUNKS[i])
+                        self.FILE_SIZE += bytestream.getbuffer().nbytes / (1024 ** 2)
+                        bytestream.close()
+                self.FILE_SIZE = (self.FILE_SIZE*100//1)/100
+                del bytestream, gif
+            else:
+                with open(f'{self.dir_path}\\bin\\{(0, 1, 2, 3)[self.channel_id.get()]}-{self.temp_id}.bin', 'rb') as img:
                     bytestream = BytesIO()
-                    pload(gif).save(bytestream, format='GIF')
-                    gif.seek(self.GIF_CHUNKS[i])
-                    self.FILE_SIZE += bytestream.getbuffer().nbytes / (1024 ** 2)
+                    pload(img).save(bytestream, format='PNG')
+                    self.FILE_SIZE = (bytestream.getbuffer().nbytes / (1024 ** 2)*100//1)/100
                     bytestream.close()
-            self.FILE_SIZE = (self.FILE_SIZE*100//1)/100
-            del bytestream, gif
-        else:
-            with open(f'{self.dir_path}\\bin\\{(0, 1, 2, 3)[self.channel_id.get()]}-{self.temp_id}.bin', 'rb') as img:
-                bytestream = BytesIO()
-                pload(img).save(bytestream, format='PNG')
-                self.FILE_SIZE = (bytestream.getbuffer().nbytes / (1024 ** 2)*100//1)/100
-                bytestream.close()
-            del bytestream
-        gccollect()
+                del bytestream
+            gccollect()
 
-    def load_overlay_filter(self):
+    def load_overlay_filter(self):      # change
+        if not self.f_path:
+            return
         if self.filter_timer2:
             self.root.after_cancel(self.filter_timer2)
             self.canvas.delete('fltrimg')
@@ -514,7 +529,53 @@ class Editor:
             self.apply_color_matrix()
             self.dec = self.root.after(300, self.intensity_decrease, _)
 
-    def animate2(self, n):
+    def init_pan(self, e):
+        self.canvas.scan_mark(e.x, e.y)
+
+    def pan(self, e):
+        self.canvas.scan_dragto(e.x, e.y, gain=1)
+        self.show_panned_view()
+
+    def zoom(self, event):
+        x = self.canvas.canvasx(event.x)
+        y = self.canvas.canvasy(event.y)
+        bbox = self.canvas.bbox(self.imagebox)
+        if bbox[0] < x < bbox[2] and bbox[1] < y < bbox[3]:
+            pass
+        else:
+            return  # zoom only inside image area
+        scale = 1.0
+        if event.delta == -120:
+            if self.ZOOM < 0.1:
+                return
+            self.ZOOM /= 1.3
+            scale /= 1.3
+        if event.delta == 120:
+            if self.ZOOM > 10:
+                return
+            self.ZOOM *= 1.3
+            scale *= 1.3
+        self.canvas.scale('mainimg', x, y, scale, scale)  # rescale image and image bounding box
+        self.canvas.scale('bbox', x, y, scale, scale)
+        self.show_panned_view()
+
+    def show_panned_view(self):
+        bbox1 = self.canvas.bbox(self.imagebox)  # get image area
+        bbox1 = (bbox1[0] + 1, bbox1[1] + 1, bbox1[2] - 1, bbox1[3] - 1)
+        bbox2 = (self.canvas.canvasx(0), self.canvas.canvasy(0), self.canvas.canvasx(self.canvas.winfo_width()),
+                 self.canvas.canvasy(self.canvas.winfo_height()))
+        x1, y1 = max(bbox2[0] - bbox1[0], 0), max(bbox2[1] - bbox1[1], 0)   # tile coordinates
+        x2, y2 = min(bbox2[2], bbox1[2]) - bbox1[0], min(bbox2[3], bbox1[3]) - bbox1[1]
+        if int(x2 - x1) > 0 and int(y2 - y1) > 0:  # show image if it's in the visible area
+            x = min(int(x2 / self.ZOOM), self.orig_width)
+            y = min(int(y2 / self.ZOOM), self.orig_height)
+            self.canvas.delete('mainimg')
+            image = self.pilimg.crop((int(x1 / self.ZOOM), int(y1 / self.ZOOM), x, y))
+            self.newtkimg = ImageTk.PhotoImage(image.resize((int(x2 - x1), int(y2 - y1))))
+            self.canvas.create_image(max(bbox2[0], bbox1[0]), max(bbox2[1], bbox1[1]),
+                                                    anchor='nw', image=self.newtkimg, tags='mainimg')
+
+    def animate2(self, n):      # change
         pass
         # if n < len(self.frames2):
         #     self.canvas.delete('fltrimg')
@@ -578,6 +639,7 @@ class Editor:
     def toggle_hud(self, state):
         if state:
             for menu in range(len(self.menubar.winfo_children())):
+                if menu == 1: continue
                 self.menubar.entryconfigure(menu + 1, state="normal")
             for wid in ['intensity', 'threshold', 'coefficient', 'carousel', 'play', 'clear', 'channel', 'color_scale', 'color_preview']:
                 if wid in ['play', 'carousel']:
@@ -590,12 +652,46 @@ class Editor:
                     self.canvas.itemconfigure(wid, state="normal")
         else:
             for menu in range(len(self.menubar.winfo_children())):
+                if menu == 1: continue
                 self.menubar.entryconfigure(menu + 1, state="disabled")
             for wid in ['intensity', 'threshold', 'coefficient', 'carousel', 'play', 'clear', 'channel', 'color_scale', 'color_preview']:
                 self.canvas.itemconfigure(wid, state="hidden")
+            if self.summary_txt:
+                self.canvas.delete(self.summary_bg, self.summary_txt, 'summary')
+
+    def toggle_image_view(self, state):
+        if not self.f_path:
+            return
+        if state:
+            self.toggle_hud(0)
+            self.imagebox = self.canvas.create_rectangle(0, 0, self.orig_width, self.orig_height, width=0, tags='bbox')
+            with open(f'{self.dir_path}\\bin\\{(0, 1, 2, 3)[self.channel_id.get()]}-{self.temp_id}.bin', 'rb') as img:
+                self.pilimg = pload(img)
+            self.view_bindings.append(self.canvas.bind("<ButtonPress-1>", self.init_pan))
+            self.view_bindings.append(self.canvas.bind("<B1-Motion>", self.pan))
+            self.view_bindings.append(self.canvas.bind("<MouseWheel>", self.zoom))
+        else:
+            self.ZOOM = 1.0
+            self.pilimg, self.imagebox = [None] * 2
+            self.canvas.delete('bbox')
+            self.canvas.delete('mainimg')
+            self.canvas.scan_dragto(0, 0, gain=1)
+            self.canvas.xview_moveto(0)
+            self.canvas.yview_moveto(0)
+            self.toggle_hud(1)
+            with open(f'{self.dir_path}\\bin\\{(0, 1, 2, 3)[self.channel_id.get()]}-{self.temp_id}.bin', 'rb') as img:
+                self.newtkimg = ImageTk.PhotoImage(pload(img).resize((self.im_width, self.im_height)))
+                self.canvas.create_image(0, 0, image=self.newtkimg, anchor=NW, tags='mainimg')
+            for i, binding in enumerate(self.view_bindings):
+                self.canvas.unbind(("<ButtonPress-1>", "<B1-Motion>", "<MouseWheel>")[i], binding)
+            self.view_bindings.clear()
+            self.get_size()
+            self.frame_summary(self.f_path[-3:])
 
     def apply_color_matrix(self):
         # self.curr_intensity.set(0)
+        if not self.f_path:
+            return
         th1 = Thread(target=self.color_matrix_process)
         self.progress_bar.configure(maximum=(3, self.FRAME_COUNT+1)[self.f_path[-3:] == 'gif'])
         self.canvas.itemconfigure('progress', state="normal")
@@ -886,7 +982,6 @@ class Editor:
         gccollect()
 
     def apply_transform_matrix(self):
-        print(f'\n{int(process.memory_info().rss / 1024 ** 2)} MB used')
         if not self.f_path or self.curr_filter.get() == 'None':
             return
         self.toggle_hud(0)
@@ -906,6 +1001,5 @@ class Editor:
             th1.start()
 
 if __name__ == '__main__':
-    process = Process()
     app = Editor()
     app.setup()
