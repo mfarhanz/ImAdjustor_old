@@ -5,6 +5,7 @@
 #### Requirements -
 - Numpy (`pip install numpy`)
 - Pillow/PIL (`pip install pillow`)
+- ttkThemes (`pip install ttkthemes`)
 
 #### Execution -
 `python image_adjustor.py` or double-click image_adjustor.py
