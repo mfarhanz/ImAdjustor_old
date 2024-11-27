@@ -1,5 +1,6 @@
 ## ImAdjustor
-##### _GUI Tool for editing Images/GIFs and adding effects_
+##### _GUI Tool for editing Images/GIFs and adding effects_  
+** *Outdated software, see [ImAdjustr](https://github.com/mfarhanz/ImAdjustr) instead* **
 <br>
 
 #### Requirements -
